@@ -1,35 +1,61 @@
 # -*- coding: utf-8 -*-
-import os
 import socket
 import threading
 import time
+import configparser
+import os
 
 import schedule
 import telegram
 from flask import Flask, request
+
+SECTION = 'main'
 
 __author__ = 'z'
 
 ANT_COUNT = 1
 job = None
 
+config = configparser.RawConfigParser()
+config.read('config.cfg')
+
 
 def get_token():
-    f = open('bot.token', 'r')
-    return f.readline()
+    return get_config_key('token')
 
 
-# return get_token()
+def get_chat_id():
+    return get_config_key('chat_id')
+
+
+def get_crt():
+    return get_config_key('crt')
+
+
+def get_key():
+    return get_config_key('key')
+
+
+def get_config_key(key):
+    return config.get(section=SECTION, option=key)
+
+
 LAST_UPDATE_ID = None
-CERT = 'server.crt'
-CERT_KEY = 'server.key'
 
-token = get_token()
-bot = telegram.Bot(token=token)
 
-print(bot.getMe())
+# CERT = get_crt()
+# CERT_KEY = get_key()
+# CHAT_ID = get_chat_id()
 
-print(bot.setWebhook(webhook_url="https://ngor44.dlinkddns.com./hook", certificate=open(CERT, 'rb')))
+
+def create_bot():
+    global bot
+    bot = telegram.Bot(token=(get_token()))
+    print(bot.getMe())
+    print(bot.setWebhook(webhook_url=get_config_key('url'), certificate=open(get_config_key('crt'), 'rb')))
+
+
+create_bot()
 
 
 # print(bot.getUpdates()[-1].message.text)
@@ -40,13 +66,13 @@ app = Flask(__name__)
 
 def other_job():
     print("other")
-    bot.sendMessage(chat_id=58174909, text=os.popen('date').read())
+    bot.sendMessage(chat_id=get_chat_id(), text=os.popen('date').read())
 
 
 def test_job():
     global ANT_COUNT
     print('test')
-    bot.sendMessage(chat_id=58174909, text=telegram.Emoji.ANT * ANT_COUNT)
+    bot.sendMessage(chat_id=get_chat_id(), text=telegram.Emoji.ANT * ANT_COUNT)
 
 
 def schedule_start():
@@ -145,6 +171,6 @@ def hook():
 #
 # while True:
 #     echo()
-context = (CERT, CERT_KEY)
+context = (get_config_key('crt'), get_config_key('key'))
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, ssl_context=context)

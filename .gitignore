@@ -59,3 +59,4 @@ server.crt
 server.key
 *.token
 .idea
+config.cfg
