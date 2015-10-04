@@ -65,13 +65,11 @@ app = Flask(__name__)
 
 
 def other_job():
-    print("other")
     bot.sendMessage(chat_id=get_chat_id(), text=os.popen('date').read())
 
 
 def test_job():
     global ANT_COUNT
-    print('test')
     bot.sendMessage(chat_id=get_chat_id(), text=telegram.Emoji.ANT * ANT_COUNT)
 
 
