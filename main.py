@@ -20,27 +20,18 @@ config = configparser.RawConfigParser()
 config.read('config.cfg')
 
 
-def get_token():
-    return get_config_key('token')
-
-
-def get_chat_id():
-    return get_config_key('chat_id')
-
-
-def get_crt():
-    return get_config_key('crt')
-
-
-def get_key():
-    return get_config_key('key')
-
-
 def get_config_key(key):
-    return config.get(section=SECTION, option=key)
+    try:
+        return config.get(section=SECTION, option=key)
+    except configparser.NoOptionError:
+        return None
 
 
-LAST_UPDATE_ID = None
+def set_config_key(key, value):
+    return config.set(section=SECTION, option=key, value=value)
+
+
+LAST_UPDATE_ID = get_config_key('last_update_id')
 
 
 # CERT = get_crt()
@@ -50,7 +41,7 @@ LAST_UPDATE_ID = None
 
 def create_bot():
     global bot
-    bot = telegram.Bot(token=(get_token()))
+    bot = telegram.Bot(token=(get_config_key('token')))
     print(bot.getMe())
     print(bot.setWebhook(webhook_url=get_config_key('url'), certificate=open(get_config_key('crt'), 'rb')))
 
@@ -65,12 +56,12 @@ app = Flask(__name__)
 
 
 def other_job():
-    bot.sendMessage(chat_id=get_chat_id(), text=os.popen('date').read())
+    bot.sendMessage(chat_id=get_config_key('chat_id'), text=os.popen('date').read())
 
 
 def test_job():
     global ANT_COUNT
-    bot.sendMessage(chat_id=get_chat_id(), text=telegram.Emoji.ANT * ANT_COUNT)
+    bot.sendMessage(chat_id=get_config_key('chat_id'), text=telegram.Emoji.ANT * ANT_COUNT)
 
 
 def schedule_start():
@@ -106,6 +97,7 @@ def hook():
         global job
         # retrieve the message in JSON and then transform it to Telegram object
         update = telegram.Update.de_json(request.get_json(force=True))
+        set_config_key('last_update_id', update.update_id)
 
         print(update.message)
         chat_id = update.message.chat.id
