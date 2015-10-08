@@ -41,6 +41,11 @@ LAST_UPDATE_ID = get_config_key('last_update_id')
 rt = RTorrent(url="http://localhost", _verbose=True)
 
 
+# rt.load_torrent_simple(
+#     "magnet:?xt=urn:btih:d5bc08ec2c2a8f1c2a133850e126cc9922214399"
+#     "&dn=Spotless%20%20-%20Season%201%20%28AlexFilm%29%20BDRip%201080p", "url", True, True)
+
+
 # torrents = rt.torrents()
 
 # print(torrents)
@@ -129,7 +134,15 @@ def hook():
                 bot.sendMessage(chat_id=chat_id, text=socket.gethostname(), reply_to_message_id=msg_id,
                                 reply_markup=reply_markup)
             elif text.lower() == 'status':
-                bot.sendMessage(chat_id=chat_id, text='Online. I\'m ' + bot.getMe().username)
+                msg = 'Online. I\'''m ' + bot.getMe().username + '\n'
+                msg += 'Torrents:\n'
+                for torrent in rt.torrents:
+                    percent = float(torrent.get_completed_bytes()) / float(torrent.get_size_bytes()) * 100.0
+                    msg += '*** %s  [%2.2f%%] ***\n' % (torrent.get_name(), percent)
+                bot.sendMessage(chat_id=chat_id, text=msg)
+            elif text[0:7] == "magnet:":
+                rt.load_torrent_simple(text, "url", True, True)
+                bot.sendMessage(chat_id=chat_id, text=text[0:7])
             elif text.lower() == "ls":
                 t = os.popen("find /misc/age/Подкасты/ -type f -newer /misc/age/Подкасты/last").read()
                 bot.sendMessage(chat_id=chat_id, text=t)
