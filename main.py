@@ -8,6 +8,7 @@ import os
 import schedule
 import telegram
 from flask import Flask, request
+from rtorrent import RTorrent
 
 SECTION = 'main'
 
@@ -18,6 +19,10 @@ job = None
 
 config = configparser.RawConfigParser()
 config.read('config.cfg')
+
+
+def get_rtorrent():
+    return RTorrent()
 
 
 def get_config_key(key):
@@ -33,6 +38,13 @@ def set_config_key(key, value):
 
 LAST_UPDATE_ID = get_config_key('last_update_id')
 
+rt = RTorrent(url="http://localhost", _verbose=True)
+
+
+# torrents = rt.torrents()
+
+# print(torrents)
+
 
 # CERT = get_crt()
 # CERT_KEY = get_key()
@@ -42,7 +54,7 @@ LAST_UPDATE_ID = get_config_key('last_update_id')
 def create_bot():
     global bot
     bot = telegram.Bot(token=(get_config_key('token')))
-    print(bot.getMe())
+    # print(bot.getMe())
     print(bot.setWebhook(webhook_url=get_config_key('url'), certificate=open(get_config_key('crt'), 'rb')))
 
 
@@ -119,7 +131,7 @@ def hook():
             elif text.lower() == 'status':
                 bot.sendMessage(chat_id=chat_id, text='Online. I\'m ' + bot.getMe().username)
             elif text.lower() == "ls":
-                t = os.popen("find /home/pi/age/Подкасты/ -type f -newer /home/pi/age/Подкасты/last").read()
+                t = os.popen("find /misc/age/Подкасты/ -type f -newer /misc/age/Подкасты/last").read()
                 bot.sendMessage(chat_id=chat_id, text=t)
             elif text == telegram.Emoji.ALARM_CLOCK:
                 job = schedule.every(5).seconds.do(other_job)
