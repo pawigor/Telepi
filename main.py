@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
-import socket
-import threading
-import time
 import configparser
 import os
+import socket
+import threading
 
 import schedule
 import telegram
+import time
 from flask import Flask, request
 from rtorrent import RTorrent
+
+MISC_AGE_LAST = "/misc/age/Подкасты/last"
 
 SECTION = 'main'
 
@@ -38,7 +40,7 @@ def set_config_key(key, value):
 
 LAST_UPDATE_ID = get_config_key('last_update_id')
 
-rt = RTorrent(url="http://localhost", _verbose=True)
+rt = RTorrent(url="http://127.0.0.1", _verbose=False)
 
 
 # rt.load_torrent_simple(
@@ -64,7 +66,6 @@ def create_bot():
 
 
 create_bot()
-
 
 # print(bot.getUpdates()[-1].message.text)
 
@@ -98,6 +99,17 @@ def schedule_start():
 
 
 schedule_start()
+
+
+def dwnl_pdcsts_job():
+    os.popen("touch " + MISC_AGE_LAST)
+    os.popen("gpo update")
+    os.popen("gpo download")
+    t = os.popen("find /misc/age/Подкасты/ -type f -newer " + MISC_AGE_LAST).read()
+    bot.sendMessage(chat_id=get_config_key('chat_id'), text=t)
+
+
+podcast_job = schedule.every(1).day.at('03:00').do(dwnl_pdcsts_job)
 
 
 @app.route("/")
@@ -134,18 +146,10 @@ def hook():
                 bot.sendMessage(chat_id=chat_id, text=socket.gethostname(), reply_to_message_id=msg_id,
                                 reply_markup=reply_markup)
             elif text.lower() == 'status':
-                msg = 'Online. I\'''m ' + bot.getMe().username + '\n'
-                msg += 'Torrents:\n'
-                for torrent in rt.torrents:
-                    percent = float(torrent.get_completed_bytes()) / float(torrent.get_size_bytes()) * 100.0
-                    msg += '*** %s  [%2.2f%%] ***\n' % (torrent.get_name(), percent)
-                bot.sendMessage(chat_id=chat_id, text=msg)
+                bot.sendMessage(chat_id=chat_id, text=(get_status()))
             elif text[0:7] == "magnet:":
                 rt.load_torrent_simple(text, "url", True, True)
                 bot.sendMessage(chat_id=chat_id, text=text[0:7])
-            elif text.lower() == "ls":
-                t = os.popen("find /misc/age/Подкасты/ -type f -newer /misc/age/Подкасты/last").read()
-                bot.sendMessage(chat_id=chat_id, text=t)
             elif text == telegram.Emoji.ALARM_CLOCK:
                 job = schedule.every(5).seconds.do(other_job)
                 bot.sendMessage(chat_id=chat_id, text="set alarmClock")
@@ -163,6 +167,19 @@ def hook():
                 bot.sendMessage(chat_id=chat_id, text=text)
 
     return 'ok'
+
+
+def get_status():
+    msg = 'Online. I\'''m ' + bot.getMe().username + '\n'
+    msg += 'Torrents:\n'
+    rt.update()
+    for torrent in rt.torrents:
+        percent = float(torrent.get_completed_bytes()) / float(torrent.get_size_bytes()) * 100.0
+        msg += '*** %s  [%2.2f%%] ***\n' % (torrent.get_name(), percent)
+    for job in schedule.jobs:
+        if hasattr(job.job_func, '__name__'):
+            msg += " %s %s \n" % (job.job_func.__name__, job.__repr__)
+    return msg
 
 
 # def echo():
